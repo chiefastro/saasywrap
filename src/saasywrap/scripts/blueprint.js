@@ -11,6 +11,30 @@ class BlueprintManager {
         this.playAllPanelBtn = document.getElementById('play-all-panel-btn');
         this.playNextPanelBtn = document.getElementById('play-next-panel-btn');
         
+        // Create modal container
+        this.requirementModal = document.createElement('div');
+        this.requirementModal.className = 'requirement-modal hidden';
+        this.requirementModal.innerHTML = `
+            <div class="requirement-modal-content">
+                <div class="requirement-modal-header">
+                    <h3></h3>
+                    <button class="close-modal-btn">×</button>
+                </div>
+                <div class="requirement-modal-body"></div>
+            </div>
+        `;
+        document.body.appendChild(this.requirementModal);
+        
+        // Modal close handlers
+        this.requirementModal.querySelector('.close-modal-btn').addEventListener('click', () => {
+            this.requirementModal.classList.add('hidden');
+        });
+        this.requirementModal.addEventListener('click', (e) => {
+            if (e.target === this.requirementModal) {
+                this.requirementModal.classList.add('hidden');
+            }
+        });
+        
         // Initialize chat manager
         this.chatManager = new ChatManager({
             chatId: 'blueprint-chat',
@@ -96,25 +120,81 @@ class BlueprintManager {
         container.className = 'blueprint-transform';
         container.dataset.transformId = transform.id;
         
+        // Get linked requirements
+        const linkedRequirements = transform.requirement_ids.map(reqId => {
+            const req = window.requirementsManager.requirements.find(r => r.id === reqId);
+            return req ? `<span class="requirement-link" data-req-id="${reqId}" title="Click to view details">${req.title}</span>` : reqId;
+        }).join(', ');
+        
         container.innerHTML = `
-            <div class="transform-header">
-                <span class="transform-number">${index + 1}</span>
-                <h3 class="transform-title">${transform.title}</h3>
-                <div class="transform-controls">
-                    <button class="play-transform-btn" title="Execute this transform">▶</button>
-                    <button class="play-until-btn" title="Execute until this transform">⏭</button>
+            <div class="transform-header" role="button" tabindex="0">
+                <div class="transform-header-row">
+                    <span class="transform-number">${index + 1}</span>
+                    <h3 class="transform-title">${transform.title}</h3>
+                </div>
+                <div class="transform-header-row">
+                    <div class="transform-type ${transform.transform_type}">${transform.transform_type}</div>
+                    <div class="transform-status ${transform.status}">
+                        ${this.getStatusIcon(transform.status)}
+                        <span>${transform.status}</span>
+                    </div>
+                    <div class="transform-controls">
+                        <button class="play-transform-btn" title="Execute this transform">▶</button>
+                        <button class="play-until-btn" title="Execute until this transform">⏭</button>
+                        <button class="toggle-details-btn" title="Toggle details">▼</button>
+                    </div>
                 </div>
             </div>
-            <div class="transform-description">${transform.description}</div>
-            <div class="transform-status ${transform.status}">
-                ${this.getStatusIcon(transform.status)}
-                <span>${transform.status}</span>
+            <div class="transform-details hidden">
+                <div class="transform-description">${transform.description}</div>
+                <div class="transform-metadata">
+                    <div class="transform-requirements">
+                        <strong>Requirements:</strong> ${linkedRequirements}
+                    </div>
+                    <div class="transform-time">
+                        <strong>Estimated Time:</strong> ${transform.estimated_time}
+                    </div>
+                    ${transform.dependencies.length > 0 ? `
+                    <div class="transform-dependencies">
+                        <strong>Dependencies:</strong> ${transform.dependencies.join(', ')}
+                    </div>` : ''}
+                </div>
             </div>
         `;
 
         // Add event listeners
+        const header = container.querySelector('.transform-header');
+        const details = container.querySelector('.transform-details');
+        const toggleBtn = container.querySelector('.toggle-details-btn');
         const playTransformBtn = container.querySelector('.play-transform-btn');
         const playUntilBtn = container.querySelector('.play-until-btn');
+        
+        const toggleDetails = (e) => {
+            // Don't toggle if clicking play buttons or requirement links
+            if (e.target.closest('.play-transform-btn, .play-until-btn, .requirement-link')) {
+                return;
+            }
+            details.classList.toggle('hidden');
+            toggleBtn.textContent = details.classList.contains('hidden') ? '▼' : '▲';
+        };
+        
+        header.addEventListener('click', toggleDetails);
+        header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleDetails(e);
+            }
+        });
+        
+        // Add requirement click handlers
+        container.querySelectorAll('.requirement-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const reqId = link.dataset.reqId;
+                this.showRequirementDetails(reqId);
+            });
+        });
         
         playTransformBtn.addEventListener('click', () => this.executeTransform(transform.id));
         playUntilBtn.addEventListener('click', () => this.executeUntilTransform(transform.id));
@@ -213,6 +293,43 @@ class BlueprintManager {
 
     updatePreview(previewHtml) {
         this.previewPanel.innerHTML = previewHtml;
+    }
+
+    showRequirementDetails(reqId) {
+        const req = window.requirementsManager.requirements.find(r => r.id === reqId);
+        if (!req) return;
+
+        const modalHeader = this.requirementModal.querySelector('.requirement-modal-header h3');
+        const modalBody = this.requirementModal.querySelector('.requirement-modal-body');
+
+        modalHeader.textContent = req.title;
+        modalBody.innerHTML = `
+            <div class="requirement-content">
+                <div class="requirement-description">${req.description}</div>
+                <div class="requirement-metadata">
+                    <div class="requirement-importance">
+                        <strong>Importance:</strong> ${req.importance}
+                    </div>
+                    <div class="requirement-category">
+                        <strong>Category:</strong> ${req.category}
+                    </div>
+                    ${req.tags && req.tags.length > 0 ? `
+                    <div class="requirement-tags">
+                        <strong>Tags:</strong>
+                        <div class="tags-list">
+                            ${req.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="requirement-footer">
+                    <span class="requirement-date">Modified: ${new Date(req.dateModified).toLocaleDateString()}</span>
+                    <span class="requirement-author">Created by: ${req.createdBy}</span>
+                </div>
+            </div>
+        `;
+
+        this.requirementModal.classList.remove('hidden');
     }
 }
 
