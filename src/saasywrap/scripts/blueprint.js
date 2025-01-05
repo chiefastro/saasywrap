@@ -57,6 +57,9 @@ class BlueprintManager {
                         }
                     }
                     this.renderBlueprint();
+                    
+                    // Notify requirements manager of transform changes
+                    window.eventBus.emit('transforms:updated', this.blueprint);
                 }
             }
         });
@@ -71,6 +74,88 @@ class BlueprintManager {
         // Bind event listeners
         this.playAllPanelBtn.addEventListener('click', () => this.executeAllTransforms());
         this.playNextPanelBtn.addEventListener('click', () => this.executeNextTransform());
+
+        // Listen for requirement changes
+        window.eventBus.on('requirements:updated', this.handleRequirementsUpdate.bind(this));
+    }
+
+    handleRequirementsUpdate(requirements) {
+        // Check for deleted requirements
+        const deletedReqIds = new Set(
+            this.blueprint.flatMap(t => t.requirement_ids)
+                .filter(reqId => !requirements.find(r => r.id === reqId))
+        );
+
+        if (deletedReqIds.size > 0) {
+            const affectedTransforms = this.blueprint.filter(t => 
+                t.requirement_ids.some(reqId => deletedReqIds.has(reqId))
+            );
+
+            if (affectedTransforms.length > 0) {
+                this.chatManager.addAgentMessage(
+                    `Some requirements referenced by transforms have been deleted. ` +
+                    `Affected transforms: ${affectedTransforms.map(t => t.title).join(', ')}. \n\n` +
+                    `Would you like me to:\n` +
+                    `1. Remove these transforms\n` +
+                    `2. Keep the transforms but remove the deleted requirement references\n` +
+                    `3. Update these transforms to implement different requirements\n\n` +
+                    `Please respond with your choice (1-3) and any additional instructions. ` +
+                    `Note: If you want to restore the deleted requirements, please use the requirements chat.`
+                );
+            }
+        }
+
+        // Check for modified requirements
+        const modifiedReqs = requirements.filter(newReq => {
+            const oldReq = this.blueprint.flatMap(t => t.requirement_ids)
+                .find(reqId => reqId === newReq.id);
+            return oldReq && (
+                newReq.title !== oldReq.title ||
+                newReq.description !== oldReq.description ||
+                newReq.importance !== oldReq.importance
+            );
+        });
+
+        if (modifiedReqs.length > 0) {
+            const affectedTransforms = this.blueprint.filter(t =>
+                t.requirement_ids.some(reqId => modifiedReqs.some(r => r.id === reqId))
+            );
+
+            if (affectedTransforms.length > 0) {
+                this.chatManager.addAgentMessage(
+                    `Some requirements referenced by transforms have been modified. ` +
+                    `Modified requirements: ${modifiedReqs.map(r => r.title).join(', ')}. ` +
+                    `Affected transforms: ${affectedTransforms.map(t => t.title).join(', ')}.\n\n` +
+                    `Would you like me to:\n` +
+                    `1. Update the transforms' descriptions and implementation details\n` +
+                    `2. Split or combine transforms to better match the modified requirements\n` +
+                    `3. Keep the transforms as is\n\n` +
+                    `Please respond with your choice (1-3) and any additional instructions. ` +
+                    `Note: To make further modifications to the requirements, please use the requirements chat.`
+                );
+            }
+        }
+
+        // Check for transforms with no requirements
+        const transformsWithoutReqs = this.blueprint.filter(t => 
+            !t.requirement_ids || t.requirement_ids.length === 0
+        );
+
+        if (transformsWithoutReqs.length > 0) {
+            this.chatManager.addAgentMessage(
+                `The following transforms have no requirements assigned: ` +
+                `${transformsWithoutReqs.map(t => t.title).join(', ')}.\n\n` +
+                `Would you like me to:\n` +
+                `1. Assign existing requirements that match these transforms\n` +
+                `2. Remove these transforms\n` +
+                `3. Keep them as is\n\n` +
+                `Please respond with your choice (1-3) and any additional instructions. ` +
+                `Note: To create new requirements for these transforms, please use the requirements chat.`
+            );
+        }
+
+        // Re-render to update any requirement references
+        this.renderBlueprint();
     }
 
     async initialize(requirements) {

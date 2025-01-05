@@ -193,10 +193,11 @@ Each requirement must be independent and focused on a single feature or constrai
                 print(f"Invalid importance value: {req['importance']}")
                 return False
                 
-            # Suggest categories but don't enforce them
-            suggested_categories = ['frontend', 'backend', 'database', 'feature', 'security', 'performance', 'ux', 'other']
-            if req['category'] not in suggested_categories:
-                print(f"Note: Using non-standard category: {req['category']}")
+            # Validate categories
+            valid_categories = ['frontend', 'backend', 'database', 'feature', 'security', 'performance', 'ux', 'general', 'other']
+            if req['category'] not in valid_categories:
+                print(f"Invalid category: {req['category']}")
+                return False
                 
             # Validate tags is a list
             if not isinstance(req['tags'], list):
@@ -235,6 +236,31 @@ The user's message: "{message}"
 You must respond with a JSON object containing two fields:
 1. "response": Your natural language response to the user
 2. "changes": An array of requirement changes (can be empty if no changes needed)
+
+When breaking down requirements into more specific ones, you can use this format:
+{{
+    "type": "modify",
+    "id": "existing-requirement-id",
+    "updates": {{
+        "category": "general",
+        "sub_requirements": [
+            {{
+                "title": "More Specific Requirement 1",
+                "description": "Detailed description",
+                "importance": "high",
+                "category": "backend",
+                "tags": ["relevant", "tags"]
+            }},
+            {{
+                "title": "More Specific Requirement 2",
+                "description": "Detailed description",
+                "importance": "medium",
+                "category": "frontend",
+                "tags": ["relevant", "tags"]
+            }}
+        ]
+    }}
+}}
 
 Example format:
 {{
@@ -299,42 +325,71 @@ IMPORTANT: Your entire response must be a valid JSON object with these exact fie
                 if not isinstance(data, dict) or 'response' not in data or 'changes' not in data:
                     print(f"Invalid response structure in choice {choice.index}, trying next choice...")
                     continue
-                
-                # Validate changes if present
-                if data['changes']:
-                    all_valid = True
-                    for change in data['changes']:
-                        if change['type'] == 'add':
-                            if not self._validate_requirement(change['requirement']):
-                                all_valid = False
-                                break
-                        elif change['type'] == 'modify':
-                            if 'id' not in change or 'updates' not in change:
-                                all_valid = False
-                                break
-                            # Validate any requirement fields in updates
-                            updates = change['updates']
-                            if 'importance' in updates and updates['importance'] not in ['high', 'medium', 'low']:
-                                all_valid = False
-                                break
-                            if 'category' in updates and updates['category'] not in ['frontend', 'backend', 'database']:
-                                all_valid = False
-                                break
-                        elif change['type'] == 'remove':
-                            if 'id' not in change:
-                                all_valid = False
-                                break
-                        else:
+
+                # Process any sub-requirements in the changes
+                processed_changes = []
+                for change in data.get('changes', []):
+                    if change['type'] == 'modify' and 'sub_requirements' in change.get('updates', {}):
+                        # Mark the parent requirement as general
+                        processed_changes.append({
+                            'type': 'modify',
+                            'id': change['id'],
+                            'updates': {
+                                'category': 'general',
+                                'importance': change['updates'].get('importance', 'medium')
+                            }
+                        })
+                        
+                        # Create new requirements for each sub-requirement
+                        for sub_req in change['updates']['sub_requirements']:
+                            processed_changes.append({
+                                'type': 'add',
+                                'requirement': {
+                                    'title': sub_req['title'],
+                                    'description': sub_req['description'],
+                                    'importance': sub_req['importance'],
+                                    'category': sub_req['category'],
+                                    'tags': sub_req['tags'],
+                                    'parent_id': change['id']  # Link to parent for reference
+                                }
+                            })
+                    else:
+                        processed_changes.append(change)
+
+                # Validate processed changes
+                all_valid = True
+                for change in processed_changes:
+                    if change['type'] == 'add':
+                        if not self._validate_requirement(change['requirement']):
                             all_valid = False
                             break
-                    
-                    if not all_valid:
-                        print(f"Invalid changes in choice {choice.index}, trying next choice...")
-                        continue
+                    elif change['type'] == 'modify':
+                        if 'id' not in change or 'updates' not in change:
+                            all_valid = False
+                            break
+                        # Validate any requirement fields in updates
+                        updates = change['updates']
+                        if 'importance' in updates and updates['importance'] not in ['high', 'medium', 'low']:
+                            all_valid = False
+                            break
+                        if 'category' in updates and updates['category'] not in ['frontend', 'backend', 'database', 'general']:
+                            all_valid = False
+                            break
+                    elif change['type'] == 'remove':
+                        if 'id' not in change:
+                            all_valid = False
+                            break
+                    else:
+                        all_valid = False
+                        break
+                
+                if not all_valid:
+                    print(f"Invalid changes in choice {choice.index}, trying next choice...")
+                    continue
                 
                 # If we get here, the response is valid
                 print(f"Found valid response in choice {choice.index}")
-                self._apply_changes(data)
+                self._apply_changes({'changes': processed_changes})
                 return data['response']
                 
             except json.JSONDecodeError as e:
@@ -347,48 +402,6 @@ IMPORTANT: Your entire response must be a valid JSON object with these exact fie
         # If we get here, none of the choices were valid
         print("No valid choices found")
         return "I apologize, but I'm having trouble processing your request. Could you please rephrase it?"
-        
-    def _apply_changes(self, changes: Dict) -> None:
-        """Apply the changes to the requirements list."""
-        for change in changes.get('changes', []):
-            if change['type'] == 'add':
-                req = change['requirement']
-                new_req = {
-                    'id': self._generate_id(),
-                    'title': req['title'],
-                    'description': req['description'],
-                    'importance': req['importance'],
-                    'category': req['category'],
-                    'tags': req['tags'],
-                    'dateAdded': self._get_current_timestamp(),
-                    'dateModified': self._get_current_timestamp(),
-                    'createdBy': 'ai-agent',
-                    'changeHistory': [{
-                        'type': 'created',
-                        'timestamp': self._get_current_timestamp(),
-                        'userId': 'ai-agent',
-                        'details': 'Requirement added during conversation'
-                    }]
-                }
-                self.requirements.append(new_req)
-            
-            elif change['type'] == 'modify':
-                for req in self.requirements:
-                    if req['id'] == change['id']:
-                        updates = change['updates']
-                        history_entry = {
-                            'type': 'modified',
-                            'timestamp': self._get_current_timestamp(),
-                            'userId': 'ai-agent',
-                            'details': 'Multiple fields updated during conversation'
-                        }
-                        req.update(updates)
-                        req['dateModified'] = self._get_current_timestamp()
-                        req['changeHistory'].append(history_entry)
-                        break
-            
-            elif change['type'] == 'remove':
-                self.requirements = [r for r in self.requirements if r['id'] != change['id']]
     
     def get_next_question(self) -> Optional[str]:
         """Generate the next question to ask the user, if needed."""
@@ -442,6 +455,65 @@ If no questions are needed, respond with 'NONE'."""
             for msg in self.conversation_history
         ])
     
-    def _format_requirements(self) -> str:
-        """Format current requirements for prompts."""
-        return "\n".join([f"- {req}" for req in self.requirements])
+    def _format_requirements(self, requirements: Optional[List[Dict]] = None) -> str:
+        """Format requirements for prompts. If no requirements provided, uses self.requirements."""
+        reqs = requirements if requirements is not None else self.requirements
+        return "\n".join([f"- {req['title']}" for req in reqs])
+
+    def _apply_changes(self, data: Dict) -> None:
+        """Apply changes to requirements."""
+        for change in data.get('changes', []):
+            if change['type'] == 'add':
+                # Add new requirement with generated ID and metadata
+                requirement = {
+                    'id': self._generate_id(),
+                    'title': change['requirement']['title'],
+                    'description': change['requirement']['description'],
+                    'importance': change['requirement']['importance'],
+                    'category': change['requirement']['category'],
+                    'tags': change['requirement']['tags'],
+                    'dateAdded': self._get_current_timestamp(),
+                    'dateModified': self._get_current_timestamp(),
+                    'createdBy': 'ai-agent',
+                    'changeHistory': [{
+                        'type': 'created',
+                        'timestamp': self._get_current_timestamp(),
+                        'userId': 'ai-agent',
+                        'details': 'Requirement created from chat'
+                    }]
+                }
+                # Add parent_id if specified
+                if 'parent_id' in change['requirement']:
+                    requirement['parent_id'] = change['requirement']['parent_id']
+                self.requirements.append(requirement)
+                
+            elif change['type'] == 'modify':
+                # Find and update existing requirement
+                for req in self.requirements:
+                    if req['id'] == change['id']:
+                        updates = change['updates']
+                        # Create change history entry
+                        changes = []
+                        for key, value in updates.items():
+                            if key != 'sub_requirements':  # Skip sub_requirements in history
+                                old_value = req.get(key, 'None')
+                                changes.append(f"{key} changed from '{old_value}' to '{value}'")
+                        
+                        history_entry = {
+                            'type': 'modified',
+                            'timestamp': self._get_current_timestamp(),
+                            'userId': 'ai-agent',
+                            'details': ', '.join(changes)
+                        }
+                        
+                        # Update the requirement
+                        req.update(updates)
+                        req['dateModified'] = self._get_current_timestamp()
+                        if 'changeHistory' not in req:
+                            req['changeHistory'] = []
+                        req['changeHistory'].append(history_entry)
+                        break
+                        
+            elif change['type'] == 'remove':
+                # Remove requirement by ID
+                self.requirements = [req for req in self.requirements if req['id'] != change['id']]

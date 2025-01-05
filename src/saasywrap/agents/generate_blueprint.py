@@ -175,6 +175,20 @@ And the conversation history:
 
 The user's message: "{message}"
 
+There are four specialized transform types that handle different aspects of the system:
+1. schema: Generates database tables and relationships
+2. form: Creates UI components (HTML, CSS, Javascript) for CRUD operations on schema elements
+3. view: Builds detailed views of single instances that may span multiple database tables
+4. dashboard: Produces aggregate views of multiple instances
+
+When modifying transforms:
+- Each requirement should be implemented by at least one transform
+- A transform can implement multiple requirements
+- Requirements should be grouped logically (e.g., related database tables in one schema transform)
+- Form transforms should typically follow schema transforms they depend on
+- View transforms can combine data from multiple schemas
+- Dashboard transforms typically come last as they often depend on other transforms
+
 You must respond with a JSON object containing two fields:
 1. "response": Your natural language response to the user
 2. "changes": An array of blueprint changes (can be empty if no changes needed)
@@ -190,7 +204,6 @@ Example format:
                 "title": "Implement User Authentication",
                 "description": "Add secure authentication system",
                 "status": "pending",
-                "type": "schema",
                 "estimated_time": "30 minutes",
                 "dependencies": [],
                 "requirement_ids": ["req-123"],
@@ -212,6 +225,16 @@ Example format:
         }}
     ]
 }}
+
+Each transform must have:
+1. id: Unique identifier
+2. title: Clear, action-oriented title
+3. description: Detailed description of what will be done
+4. status: One of: pending, in_progress, completed, failed, rolled_back
+5. estimated_time: Estimated time to complete
+6. dependencies: Array of transform IDs that must be completed first
+7. requirement_ids: Array of requirement IDs that this transform implements
+8. transform_type: One of: schema, form, view, dashboard (determines which specialized agent will handle execution)
 
 Each change must be one of:
 1. add: Include a complete new transform object
