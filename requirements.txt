@@ -1,0 +1,8 @@
+flask
+openai
+python-dotenv
+werkzeug
+requests
+numpy
+pandas
+openpyxl

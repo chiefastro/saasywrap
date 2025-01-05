@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaasyWrap - Build Your SaaS</title>
+    <link rel="stylesheet" href="../styles/layout.css">
+    <link rel="stylesheet" href="../styles/chat.css">
+    <link rel="stylesheet" href="../styles/plans.css">
+    <link rel="stylesheet" href="../styles/requirements.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Upload Screen -->
+        <section id="upload-screen" class="screen">
+            <div class="upload-container">
+                <textarea id="requirements-input" placeholder="Describe your application requirements..."></textarea>
+                <div class="upload-button-container">
+                    <input type="file" id="dataset-upload" accept=".csv,.xlsx,.xls" hidden>
+                    <button onclick="document.getElementById('dataset-upload').click()">Upload Dataset (Excel/CSV)</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Requirements Screen -->
+        <section id="requirements-screen" class="screen hidden">
+            <nav class="top-nav">
+                <div class="nav-title">Requirements Gathering</div>
+                <button id="to-plans-btn" class="nav-button">Generate Plan</button>
+            </nav>
+            <div class="split-layout">
+                <div class="chat-panel">
+                    <div class="chat-header">
+                        <h2>AI Assistant</h2>
+                        <div class="chat-explanation">Chat with the AI to refine your requirements. Ask questions, request clarification, or discuss implementation details.</div>
+                    </div>
+                    <div id="requirements-chat" class="chat-messages"></div>
+                    <div class="chat-input-container">
+                        <input type="text" id="requirements-chat-input" placeholder="Type your response...">
+                        <button class="send-btn">Send</button>
+                    </div>
+                </div>
+                <div class="requirements-panel">
+                    <div class="panel-header">
+                        <h2>Requirements</h2>
+                    </div>
+                    <div id="requirements-list"></div>
+                    <div class="panel-footer">
+                        <button class="add-requirement-button" onclick="requirementsManager.addNewRequirement()">+</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Plans Screen -->
+        <section id="plans-screen" class="screen hidden">
+            <nav class="top-nav">
+                <div class="nav-title">Plan Execution</div>
+                <div class="nav-controls">
+                    <button id="view-requirements-btn">View Requirements</button>
+                </div>
+            </nav>
+            <div class="three-panel-layout">
+                <div class="chat-panel">
+                    <div id="plans-chat" class="chat-messages"></div>
+                    <div class="chat-input-container">
+                        <input type="text" id="plans-chat-input" placeholder="Type your response...">
+                        <button class="send-btn">Send</button>
+                    </div>
+                </div>
+                <div class="preview-panel">
+                    <div class="panel-header">
+                        <h2>Preview</h2>
+                    </div>
+                    <div id="app-preview"></div>
+                </div>
+                <div class="plans-panel">
+                    <div class="panel-header">
+                        <h2>Plan Steps</h2>
+                        <div class="plan-controls">
+                            <button id="play-all-btn">Play All</button>
+                            <button id="play-next-btn">Next</button>
+                        </div>
+                    </div>
+                    <div id="plan-steps"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <script src="../scripts/globals.js"></script>
+    <script src="../scripts/layout.js"></script>
+    <script src="../scripts/chat.js"></script>
+    <script src="../scripts/plans.js"></script>
+    <script src="../scripts/requirements.js"></script>
+</body>
+</html>
