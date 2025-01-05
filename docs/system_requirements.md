@@ -48,20 +48,104 @@ The admin can edit the requirements by clicking on a requirement and editing it.
 
 The chat interface can also be used to refine the set of requirements. 
 
-** Plans **
-After the admin is satisfied with the requirements, they click a button to generate a plan. The requirements are sent to the generate_plan.py agent and the admin enters a new screen. 
+** Blueprints **
+After the admin is satisfied with the requirements, they click a button to generate a blueprint. The requirements are sent to the generate_plan.py agent and the admin enters a new screen. 
 
-The agent generates an initial plan for the app. That plan is displayed in a panel on the right, and a chat dialogue is displayed on the left. The plan display and chat can be swapped out with the requirements display and chat with a navigation menu on the top right.
+The agent generates an initial blueprint for the app. That blueprint is displayed in a panel on the right, and a chat dialogue is displayed on the left. The blueprint display and chat can be swapped out with the requirements display and chat with a navigation menu on the top right.
 
-When on the Plans page, there will be a middle panel that will be a preview of the generated app (empty until after at least one plan step is executed).
+When on the Blueprints page, there will be a middle panel that will be a preview of the generated app (empty until after at least one transform is executed).
 
-The plan will be a list of steps that the admin can review and provide feedback on. The plan will be generated in a way that is easy to understand and modify for a non-technical admin.
+The blueprint will be a list of transforms that the admin can review and provide feedback on. The blueprint will be generated in a way that is easy to understand and modify for a non-technical admin.
 
-When a plan is generated (either initial or after feedback), the agent may decide it needs to ask the admin a question. Those questions are displayed in the chat dialogue on the left. Responses from the admin are sent back to the agent, which updates the plan.
+When a blueprint is generated (either initial or after feedback), the agent may decide it needs to ask the admin a question. Those questions are displayed in the chat dialogue on the left. Responses from the admin are sent back to the agent, which updates the blueprint.
 
-Each step in the plan is a separate, executable event. The admin can click a play button on any step to execute it. The step will be executed, and the result will be displayed in the middle panel.
+Each transform in the blueprint is a separate, executable event. The admin can click a play button on any transform to execute it. The transform will be executed, and the result will be displayed in the middle panel.
 
-The admin can also click a "play all" button to execute the entire plan, or a "next" button to execute the next step in the plan, or a "play until" button to execute the next steps in the plan until a certain step is reached.
+The admin can also click a "play all" button to execute the entire blueprint, or a "next" button to execute the next transform in the blueprint, or a "play until" button to execute the next transforms in the blueprint until a certain transform is reached.
 
-The admin can choose to accept or reject the changes made by a step. If rejected, the step is rolled back, and the chat dialogue gets a question added asking why it was rejected.
+The admin can choose to accept or reject the changes made by a transform. If rejected, the transform is rolled back, and the chat dialogue gets a question added asking why it was rejected.
 
+** Transforms **
+Each step of a plan is called a Transform. A Transform is a self-contained unit that converts a subset of requirements into a specific component of the system. Each Transform has the following characteristics:
+
+1. Requirements Assignment: A specific set of requirements from the overall requirements list is assigned to the Transform.
+
+2. Single Agent Execution: Each Transform uses exactly one specialized agent to generate one piece of the system:
+   - Schema Transform: Generates database tables and relationships
+   - Form Transform: Creates UI components (HTML, CSS, Javascript) for CRUD operations on schema elements
+   - View Transform: Builds detailed views of single instances that may span multiple database tables
+   - Dashboard Transform: Produces aggregate views of multiple instances
+
+3. Execution Metadata: Each Transform maintains execution information including:
+   - Status (pending, in-progress, completed, failed)
+   - Execution timestamps
+   - Performance metrics
+   - Other relevant metadata
+
+4. Artifact Linkage: All artifacts produced during Transform execution (e.g., generated code, schemas, UI components) are linked directly to the Transform for easy reference and tracking.
+
+5. Feedback Loop: Users can provide feedback on any aspect of the Transform through the chat interface, including:
+   - Generated artifacts
+   - Requirements interpretation
+   - Design decisions
+   - Implementation details
+
+The Transform concept ensures that each piece of the system is generated in a modular, trackable way, with clear connections between requirements, generation process, and outputs. 
+
+** Artifacts **
+Artifacts are the persistent, functional outputs produced by Transforms. They represent the actual components of the generated application. The Artifacts screen allows admins to view and modify these components after they've been generated.
+
+The Artifacts screen follows the consistent layout pattern:
+- Left panel: Chat interface for discussing and refining artifacts
+- Middle panel: Live preview of the selected artifact
+- Right panel: List of all artifacts, organized by type:
+  - Database Schemas
+  - Forms
+  - Views
+  - Dashboards
+
+Each artifact can be:
+- Previewed in the middle panel
+- Modified directly through a code editor
+- Tested in isolation
+- Rolled back to a previous version
+- Exported for external use
+
+** End-to-End Workflow **
+The complete workflow for an admin to build their application follows these steps:
+
+1. Requirements Phase
+   - Describe application needs
+   - Upload sample data
+   - Review and refine generated requirements
+   - Engage with AI to clarify requirements
+
+2. Blueprint Phase
+   - Generate initial blueprint from requirements
+   - Review proposed transforms
+   - Provide feedback and adjust blueprint
+   - Execute transforms in desired order
+
+3. Transform Phase
+   - Monitor transform execution
+   - Review generated artifacts
+   - Accept or reject transform results
+   - Provide feedback for rejected transforms
+
+4. Artifact Phase
+   - Review all generated artifacts
+   - Test artifacts individually
+   - Make manual adjustments if needed
+   - Ensure artifacts work together as expected
+
+5. Deployment Phase
+   - Review complete application
+   - Run final tests
+   - Deploy to production
+   - Share with end users
+
+At any point in the workflow, the admin can:
+- Return to a previous phase
+- Modify earlier decisions
+- Request AI assistance through the chat interface
+- Preview the current state of the application 

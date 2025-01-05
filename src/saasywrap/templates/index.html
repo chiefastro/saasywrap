@@ -6,7 +6,7 @@
     <title>SaasyWrap - Build Your SaaS</title>
     <link rel="stylesheet" href="../styles/layout.css">
     <link rel="stylesheet" href="../styles/chat.css">
-    <link rel="stylesheet" href="../styles/plans.css">
+    <link rel="stylesheet" href="../styles/blueprint.css">
     <link rel="stylesheet" href="../styles/requirements.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
             <div class="top-nav">
                 <h1 class="app-title">SaasyWrap</h1>
                 <div class="nav-title">Requirements Gathering</div>
-                <button id="to-plans-btn" class="nav-button">Generate Plan</button>
+                <button id="to-blueprint-btn" class="nav-button">Generate Blueprint</button>
             </div>
             <div class="split-layout">
                 <div class="chat-panel">
@@ -38,7 +38,7 @@
                     </div>
                     <div id="requirements-chat" class="chat-messages"></div>
                     <div class="chat-input-container">
-                        <input type="text" id="requirements-chat-input" placeholder="Type your response...">
+                        <input type="text" id="requirements-chat-input" class="chat-input" placeholder="Type your response...">
                         <button class="send-btn">Send</button>
                     </div>
                 </div>
@@ -54,21 +54,23 @@
             </div>
         </section>
 
-        <!-- Plans Screen -->
-        <section id="plans-screen" class="screen hidden">
+        <!-- Blueprint Screen -->
+        <section id="blueprint-screen" class="screen hidden">
             <div class="top-nav">
                 <h1 class="app-title">SaasyWrap</h1>
-                <div class="plan-controls">
-                    <button id="view-requirements-btn">← View Requirements</button>
-                    <button id="play-all-btn">Play All</button>
-                    <button id="play-next-btn">Play Next</button>
+                <div class="blueprint-controls">
+                    <button id="view-requirements-btn" class="blueprint-btn">← View Requirements</button>
                 </div>
             </div>
             <div class="three-panel-layout">
                 <div class="chat-panel">
-                    <div id="plans-chat" class="chat-messages"></div>
+                    <div class="chat-header">
+                        <h2>AI Assistant</h2>
+                        <div class="chat-explanation">Chat with the AI to refine the blueprint. Ask questions, request clarification, or discuss implementation details.</div>
+                    </div>
+                    <div id="blueprint-chat" class="chat-messages"></div>
                     <div class="chat-input-container">
-                        <input type="text" id="plans-chat-input" placeholder="Type your response...">
+                        <input type="text" id="blueprint-chat-input" class="chat-input" placeholder="Type your response...">
                         <button class="send-btn">Send</button>
                     </div>
                 </div>
@@ -78,15 +80,15 @@
                     </div>
                     <div id="app-preview"></div>
                 </div>
-                <div class="plans-panel">
+                <div class="blueprint-panel">
                     <div class="panel-header">
-                        <h2>Plan Steps</h2>
-                        <div class="plan-controls">
-                            <button id="play-all-btn">Play All</button>
-                            <button id="play-next-btn">Next</button>
+                        <h2>Blueprint</h2>
+                        <div class="blueprint-controls">
+                            <button id="play-all-panel-btn" class="blueprint-btn">Play All</button>
+                            <button id="play-next-panel-btn" class="blueprint-btn">Next</button>
                         </div>
                     </div>
-                    <div id="plan-steps"></div>
+                    <div id="blueprint-transforms"></div>
                 </div>
             </div>
         </section>
@@ -94,7 +96,8 @@
     <script src="../scripts/globals.js"></script>
     <script src="../scripts/layout.js"></script>
     <script src="../scripts/chat.js"></script>
-    <script src="../scripts/plans.js"></script>
+    <script src="../scripts/upload.js"></script>
     <script src="../scripts/requirements.js"></script>
+    <script src="../scripts/blueprint.js"></script>
 </body>
 </html>

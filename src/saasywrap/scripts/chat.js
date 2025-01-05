@@ -1,60 +1,131 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const requirementsInput = document.getElementById('requirements-input');
-    const datasetUpload = document.getElementById('dataset-upload');
-    
-    // Handle file upload and requirements submission
-    datasetUpload.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+class ChatManager {
+    constructor(options) {
+        const {
+            chatId,          // ID of the chat messages container
+            inputId,         // ID of the chat input
+            sendButtonSelector, // Selector for the send button
+            apiEndpoint,     // API endpoint for chat messages
+            onResponse      // Callback for handling responses
+        } = options;
+
+        // DOM Elements
+        this.chatMessages = document.getElementById(chatId);
+        this.chatInput = document.getElementById(inputId);
+        this.sendBtn = document.querySelector(sendButtonSelector);
         
-        const requirements = requirementsInput.value.trim();
-        if (!requirements) {
-            alert('Please describe your application requirements before uploading a dataset.');
-            return;
-        }
+        // State
+        this.conversation_history = [];
+        this.apiEndpoint = apiEndpoint;
+        this.onResponse = onResponse;
         
-        // Show loading state
-        const uploadButton = datasetUpload.nextElementSibling;
-        const originalText = uploadButton.textContent;
-        uploadButton.textContent = 'Processing...';
-        uploadButton.disabled = true;
+        // Bind event listeners
+        this.chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                const value = this.chatInput.value.trim();
+                e.preventDefault();
+                if (value) {
+                    this.processMessage(value);
+                }
+            }
+        });
+        
+        this.sendBtn.addEventListener('click', () => {
+            const value = this.chatInput.value.trim();
+            if (value) {
+                this.processMessage(value);
+            }
+        });
+    }
+
+    async processMessage(message) {
+        this.addUserMessage(message);
+        this.chatInput.value = '';
+        
+        this.showTypingIndicator();
         
         try {
-            // Initialize requirements manager with initial data
-            await window.requirementsManager.initialize(requirements, file);
+            const response = await fetch(this.apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message,
+                    chatHistory: this.conversation_history
+                })
+            });
             
-            // Transition to requirements screen
-            showScreen('requirements');
+            const data = await response.json();
+            
+            this.hideTypingIndicator();
+            
+            if (data.response) {
+                this.addAgentMessage(data.response);
+            }
+            
+            // Call the response handler if provided
+            if (this.onResponse) {
+                this.onResponse(data);
+            }
         } catch (error) {
-            console.error('Error processing upload:', error);
-            alert('There was an error processing your upload. Please try again.');
-        } finally {
-            // Reset upload button
-            uploadButton.textContent = originalText;
-            uploadButton.disabled = false;
+            this.hideTypingIndicator();
+            console.error('Error processing message:', error);
+            this.addAgentMessage('Sorry, there was an error processing your message. Please try again.');
         }
-    });
+    }
+
+    addUserMessage(message) {
+        const messageEl = document.createElement('div');
+        messageEl.className = 'chat-message user-message';
+        messageEl.textContent = message;
+        this.chatMessages.appendChild(messageEl);
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        
+        this.conversation_history.push({
+            role: 'user',
+            content: message
+        });
+    }
     
-    // Handle requirements-only submission (no dataset)
-    requirementsInput.addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter' && e.ctrlKey) {
-            e.preventDefault();
-            const requirements = requirementsInput.value.trim();
-            if (!requirements) {
-                alert('Please describe your application requirements.');
-                return;
-            }
-            
-            try {
-                // Initialize requirements manager with just requirements
-                await window.requirementsManager.initialize(requirements);
-                
-                // Transition to requirements screen
-                showScreen('requirements');
-            } catch (error) {
-                console.error('Error processing requirements:', error);
-                alert('There was an error processing your requirements. Please try again.');
-            }
+    addAgentMessage(message) {
+        const messageEl = document.createElement('div');
+        messageEl.className = 'chat-message agent-message';
+        messageEl.textContent = message;
+        this.chatMessages.appendChild(messageEl);
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        
+        this.conversation_history.push({
+            role: 'assistant',
+            content: message
+        });
+    }
+
+    showTypingIndicator() {
+        const indicator = document.createElement('div');
+        indicator.className = 'typing-indicator';
+        indicator.id = 'typing-indicator';
+        indicator.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        `;
+        this.chatMessages.appendChild(indicator);
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    hideTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
         }
-    });
-});
+    }
+
+    clearChat() {
+        this.chatMessages.innerHTML = '';
+        this.conversation_history = [];
+    }
+
+    setAdditionalRequestData(getData) {
+        this.getAdditionalRequestData = getData;
+    }
+}

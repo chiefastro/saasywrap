@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 from agents.generate_requirements import RequirementsAgent
-from agents.generate_plan import PlanAgent
+from agents.generate_blueprint import BlueprintAgent
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,7 +59,6 @@ def generate_requirements():
 @app.route('/api/chat/requirements', methods=['POST'])
 def requirements_chat():
     data = request.json
-    print(data)
     message = data.get('message', '')
     current_requirements = data.get('currentRequirements', [])
     chat_history = data.get('chatHistory', [])
@@ -91,37 +90,37 @@ def requirements_chat():
         'requirements': updated_requirements,
     })
 
-@app.route('/api/generate-plan', methods=['POST'])
-def generate_plan():
+@app.route('/api/generate-blueprint', methods=['POST'])
+def generate_blueprint():
     data = request.json
     requirements = data.get('requirements', [])
     
-    agent = PlanAgent()
-    result = agent.generate_initial_plan(requirements)
+    agent = BlueprintAgent()
+    result = agent.generate_initial_blueprint(requirements)
     
     return jsonify(result)
 
-@app.route('/api/execute-plan-step', methods=['POST'])
-def execute_plan_step():
+@app.route('/api/execute-blueprint-transform', methods=['POST'])
+def execute_blueprint_transform():
     data = request.json
-    step_id = data.get('stepId')
+    transform_id = data.get('transformId')
     preview_state = data.get('previewState', {})
     
-    agent = PlanAgent()
-    result = agent.execute_step(step_id, preview_state)
+    agent = BlueprintAgent()
+    result = agent.execute_transform(transform_id, preview_state)
     
     return jsonify(result)
 
-@app.route('/api/chat/plans', methods=['POST'])
-def plans_chat():
+@app.route('/api/chat/blueprint', methods=['POST'])
+def blueprint_chat():
     data = request.json
     message = data.get('message', '')
-    current_plans = data.get('currentPlans', [])
+    current_blueprint = data.get('currentBlueprint', [])
     chat_history = data.get('chatHistory', [])
     preview_state = data.get('previewState', {})
     
-    agent = PlanAgent()
-    result = agent.process_message(message, current_plans, chat_history, preview_state)
+    agent = BlueprintAgent()
+    result = agent.process_message(message, current_blueprint, chat_history, preview_state)
     
     return jsonify(result)
 

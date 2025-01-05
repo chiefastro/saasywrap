@@ -18,7 +18,7 @@
     background-color: #f8f9fa;
 }
 
-.plans-panel {
+.blueprint-panel {
     width: 30%;
     display: flex;
     flex-direction: column;
@@ -34,12 +34,42 @@
     align-items: center;
 }
 
-.plan-controls {
+.blueprint-controls {
     display: flex;
     gap: 0.5rem;
 }
 
-.plan-step {
+.blueprint-btn {
+    padding: 0.5rem 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.blueprint-btn:hover {
+    background-color: #0056b3;
+}
+
+.blueprint-btn:active {
+    background-color: #004085;
+}
+
+#view-requirements-btn {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+}
+
+#view-requirements-btn:hover {
+    background-color: #6c757d;
+    color: white;
+}
+
+.blueprint-transform {
     margin: 1rem;
     padding: 1rem;
     background-color: white;
@@ -48,18 +78,18 @@
     transition: all 0.2s ease;
 }
 
-.plan-step:hover {
+.blueprint-transform:hover {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.step-header {
+.transform-header {
     display: flex;
     align-items: center;
     gap: 1rem;
     margin-bottom: 0.5rem;
 }
 
-.step-number {
+.transform-number {
     width: 24px;
     height: 24px;
     background-color: #007bff;
@@ -71,18 +101,18 @@
     font-size: 0.9rem;
 }
 
-.step-title {
+.transform-title {
     margin: 0;
     flex-grow: 1;
     font-size: 1.1rem;
 }
 
-.step-controls {
+.transform-controls {
     display: flex;
     gap: 0.5rem;
 }
 
-.step-controls button {
+.transform-controls button {
     padding: 0.25rem 0.5rem;
     background: none;
     border: 1px solid #e0e0e0;
@@ -91,18 +121,18 @@
     transition: all 0.2s ease;
 }
 
-.step-controls button:hover {
+.transform-controls button:hover {
     background-color: #f8f9fa;
     border-color: #dee2e6;
 }
 
-.step-description {
+.transform-description {
     margin-bottom: 0.5rem;
     color: #6c757d;
     font-size: 0.95rem;
 }
 
-.step-status {
+.transform-status {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -111,27 +141,27 @@
     border-radius: 4px;
 }
 
-.step-status.pending {
+.transform-status.pending {
     background-color: #f8f9fa;
     color: #6c757d;
 }
 
-.step-status.in_progress {
+.transform-status.in_progress {
     background-color: #fff3cd;
     color: #856404;
 }
 
-.step-status.completed {
+.transform-status.completed {
     background-color: #d4edda;
     color: #155724;
 }
 
-.step-status.failed {
+.transform-status.failed {
     background-color: #f8d7da;
     color: #721c24;
 }
 
-.step-status.rolled_back {
+.transform-status.rolled_back {
     background-color: #e2e3e5;
     color: #383d41;
 }

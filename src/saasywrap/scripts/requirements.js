@@ -1,9 +1,7 @@
 class RequirementsManager {
     constructor() {
         this.requirements = [];
-        this.chatMessages = [];
-        this.conversation_history = [];
-        this.currentUserId = 'default-user'; // TODO: Replace with actual user authentication
+        this.currentUserId = 'default-user';
         this.initialContext = {
             requirements: '',
             datasetPath: null,
@@ -12,31 +10,27 @@ class RequirementsManager {
         
         // DOM Elements
         this.requirementsList = document.getElementById('requirements-list');
-        this.chatMessages = document.getElementById('requirements-chat');
-        this.chatInput = document.getElementById('requirements-chat-input');
         this.addRequirementBtn = document.getElementById('add-requirement-button');
-        this.sendBtn = document.querySelector('.send-btn');
         
-        // Bind event listeners
-        
-        // Add keydown event listener for Enter key
-        this.chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                const value = this.chatInput.value.trim();
-                e.preventDefault();
-                if (value) {
-                    this.processMessage(value);
+        // Initialize chat manager
+        this.chatManager = new ChatManager({
+            chatId: 'requirements-chat',
+            inputId: 'requirements-chat-input',
+            sendButtonSelector: '#requirements-screen .send-btn',
+            apiEndpoint: '/api/chat/requirements',
+            onResponse: (data) => {
+                if (data.requirements) {
+                    this.requirements = data.requirements.map(req => this.enrichRequirement(req));
+                    this.renderRequirements();
                 }
             }
         });
-        
-        // Add click event listener for send button
-        this.sendBtn.addEventListener('click', () => {
-            const value = this.chatInput.value.trim();
-            if (value) {
-                this.processMessage(value);
-            }
-        });
+
+        // Set additional request data for chat
+        this.chatManager.setAdditionalRequestData(() => ({
+            currentRequirements: this.requirements,
+            initialContext: this.initialContext
+        }));
     }
 
     generateId() {
