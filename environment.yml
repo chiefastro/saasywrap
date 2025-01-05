@@ -1,0 +1,16 @@
+name: saasywrap
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+    - flask
+    - openai
+    - python-dotenv
+    - werkzeug
+    - requests
+    - numpy
+    - pandas
+    - -r requirements.txt 
