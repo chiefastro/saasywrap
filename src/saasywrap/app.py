@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 from agents.generate_requirements import RequirementsAgent
+from agents.generate_blueprint import BlueprintAgent
 
 # Load environment variables from .env file
 load_dotenv()
@@ -58,7 +59,6 @@ def generate_requirements():
 @app.route('/api/chat/requirements', methods=['POST'])
 def requirements_chat():
     data = request.json
-    print(data)
     message = data.get('message', '')
     current_requirements = data.get('currentRequirements', [])
     chat_history = data.get('chatHistory', [])
@@ -89,6 +89,50 @@ def requirements_chat():
         'response': response,
         'requirements': updated_requirements,
     })
+
+@app.route('/api/generate-blueprint', methods=['POST'])
+def generate_blueprint():
+    data = request.json
+    requirements = data.get('requirements', [])
+    
+    agent = BlueprintAgent()
+    result = agent.generate_initial_blueprint(requirements)
+    
+    return jsonify(result)
+
+@app.route('/api/execute-blueprint-transform', methods=['POST'])
+def execute_blueprint_transform():
+    data = request.json
+    transform_id = data.get('transformId')
+    preview_state = data.get('previewState', {})
+    
+    agent = BlueprintAgent()
+    result = agent.execute_transform(transform_id, preview_state)
+    
+    return jsonify(result)
+
+@app.route('/api/chat/blueprint', methods=['POST'])
+def blueprint_chat():
+    data = request.json
+    message = data.get('message', '')
+    current_blueprint = data.get('currentBlueprint', [])
+    preview_state = data.get('previewState', {})
+    requirements = data.get('requirements', [])
+    chat_history = data.get('chatHistory', [])
+    
+    # Initialize the blueprint agent
+    agent = BlueprintAgent()
+    
+    # Process the message with full context
+    result = agent.process_message(
+        message=message,
+        current_blueprint=current_blueprint,
+        chat_history=chat_history,
+        preview_state=preview_state,
+        requirements=requirements
+    )
+    
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(debug=True)

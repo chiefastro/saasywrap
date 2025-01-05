@@ -12,7 +12,7 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-echo -e "${CYAN}🚀 Starting SaasyWrap setup...${NC}"
+echo -e "${CYAN}🚀 Starting SaasyWrap...${NC}"
 
 # Check if conda is installed
 if ! command_exists conda; then

@@ -87,7 +87,7 @@ Guidelines for each requirement:
 1. title: Brief but specific, action-oriented
 2. description: Detailed, testable, and from a user's perspective
 3. importance: Must be exactly one of: "high", "medium", "low"
-4. category: Must be exactly one of: "frontend", "backend", "database"
+4. category: Must be exactly one of: "frontend", "backend", "database", "feature", "security", "performance", "ux", "other"
 5. tags: Array of relevant features, technologies, or themes
 
 IMPORTANT: Your response must be a valid JSON object with both 'response' and 'requirements' fields.
@@ -193,10 +193,10 @@ Each requirement must be independent and focused on a single feature or constrai
                 print(f"Invalid importance value: {req['importance']}")
                 return False
                 
-            # Validate category
-            if req['category'] not in ['frontend', 'backend', 'database']:
-                print(f"Invalid category value: {req['category']}")
-                return False
+            # Suggest categories but don't enforce them
+            suggested_categories = ['frontend', 'backend', 'database', 'feature', 'security', 'performance', 'ux', 'other']
+            if req['category'] not in suggested_categories:
+                print(f"Note: Using non-standard category: {req['category']}")
                 
             # Validate tags is a list
             if not isinstance(req['tags'], list):

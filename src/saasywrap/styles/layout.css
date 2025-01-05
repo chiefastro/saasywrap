@@ -11,6 +11,18 @@ body {
     color: #333;
 }
 
+.app-title {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #0066cc;
+    margin-bottom: 1.5rem;
+}
+
+/* Add specific style for top nav title */
+.top-nav .app-title {
+    margin-bottom: 0;
+}
+
 #app {
     min-height: 100vh;
 }
@@ -68,6 +80,7 @@ body {
     padding: 1rem 2rem;
     background-color: #f8f9fa;
     border-bottom: 1px solid #e0e0e0;
+    height: 60px;
 }
 
 .nav-button {
@@ -83,14 +96,14 @@ body {
 .split-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    height: calc(100vh - 64px);
+    height: calc(100vh - 80px);
 }
 
 /* Three Panel Layout (Plans Screen) */
 .three-panel-layout {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
-    height: calc(100vh - 64px);
+    height: calc(100vh - 80px);
 }
 
 /* Common Panel Styles */
