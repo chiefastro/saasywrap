@@ -1,0 +1,147 @@
+.three-panel-layout {
+    display: flex;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+}
+
+.chat-panel {
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #e0e0e0;
+}
+
+.preview-panel {
+    width: 40%;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
+}
+
+.plans-panel {
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #e0e0e0;
+}
+
+.panel-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.plan-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.plan-step {
+    margin: 1rem;
+    padding: 1rem;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.plan-step:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.step-number {
+    width: 24px;
+    height: 24px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.step-title {
+    margin: 0;
+    flex-grow: 1;
+    font-size: 1.1rem;
+}
+
+.step-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.step-controls button {
+    padding: 0.25rem 0.5rem;
+    background: none;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.step-controls button:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.step-description {
+    margin-bottom: 0.5rem;
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+.step-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.step-status.pending {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.step-status.in_progress {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.step-status.completed {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.step-status.failed {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.step-status.rolled_back {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+#app-preview {
+    flex-grow: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    margin: 1rem;
+    border-radius: 4px;
+}

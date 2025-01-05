@@ -70,6 +70,9 @@ class RequirementsManager {
                 this.addUserMessage("Initial Requirements:\n" + initialRequirements);
             }
 
+            // Show typing indicator before API call
+            this.showTypingIndicator();
+
             if (initialDataset) {
                 const formData = new FormData();
                 formData.append('dataset', initialDataset);
@@ -96,6 +99,9 @@ class RequirementsManager {
             
             const data = await response.json();
             
+            // Hide typing indicator before showing response
+            this.hideTypingIndicator();
+            
             // Enrich the requirements with metadata
             this.requirements = data.requirements.map(req => this.enrichRequirement(req));
             this.renderRequirements();
@@ -110,6 +116,8 @@ class RequirementsManager {
                 this.initialContext.datasetPath = data.datasetPath;
             }
         } catch (error) {
+            // Hide typing indicator on error
+            this.hideTypingIndicator();
             console.error('Error generating requirements:', error);
             this.addAgentMessage('Sorry, there was an error generating the requirements. Please try again.');
         }
@@ -121,6 +129,9 @@ class RequirementsManager {
             const reqElement = this.createRequirementElement(req);
             this.requirementsList.appendChild(reqElement);
         });
+        
+        // Scroll to the bottom of the requirements list
+        this.requirementsList.scrollTop = this.requirementsList.scrollHeight;
     }
 
     createRequirementElement(req) {

@@ -14,6 +14,7 @@
         <!-- Upload Screen -->
         <section id="upload-screen" class="screen">
             <div class="upload-container">
+                <h1 class="app-title">SaasyWrap</h1>
                 <textarea id="requirements-input" placeholder="Describe your application requirements..."></textarea>
                 <div class="upload-button-container">
                     <input type="file" id="dataset-upload" accept=".csv,.xlsx,.xls" hidden>
@@ -24,10 +25,11 @@
 
         <!-- Requirements Screen -->
         <section id="requirements-screen" class="screen hidden">
-            <nav class="top-nav">
+            <div class="top-nav">
+                <h1 class="app-title">SaasyWrap</h1>
                 <div class="nav-title">Requirements Gathering</div>
                 <button id="to-plans-btn" class="nav-button">Generate Plan</button>
-            </nav>
+            </div>
             <div class="split-layout">
                 <div class="chat-panel">
                     <div class="chat-header">
@@ -54,12 +56,14 @@
 
         <!-- Plans Screen -->
         <section id="plans-screen" class="screen hidden">
-            <nav class="top-nav">
-                <div class="nav-title">Plan Execution</div>
-                <div class="nav-controls">
-                    <button id="view-requirements-btn">View Requirements</button>
+            <div class="top-nav">
+                <h1 class="app-title">SaasyWrap</h1>
+                <div class="plan-controls">
+                    <button id="view-requirements-btn">← View Requirements</button>
+                    <button id="play-all-btn">Play All</button>
+                    <button id="play-next-btn">Play Next</button>
                 </div>
-            </nav>
+            </div>
             <div class="three-panel-layout">
                 <div class="chat-panel">
                     <div id="plans-chat" class="chat-messages"></div>

@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 from agents.generate_requirements import RequirementsAgent
+from agents.generate_plan import PlanAgent
 
 # Load environment variables from .env file
 load_dotenv()
@@ -89,6 +90,40 @@ def requirements_chat():
         'response': response,
         'requirements': updated_requirements,
     })
+
+@app.route('/api/generate-plan', methods=['POST'])
+def generate_plan():
+    data = request.json
+    requirements = data.get('requirements', [])
+    
+    agent = PlanAgent()
+    result = agent.generate_initial_plan(requirements)
+    
+    return jsonify(result)
+
+@app.route('/api/execute-plan-step', methods=['POST'])
+def execute_plan_step():
+    data = request.json
+    step_id = data.get('stepId')
+    preview_state = data.get('previewState', {})
+    
+    agent = PlanAgent()
+    result = agent.execute_step(step_id, preview_state)
+    
+    return jsonify(result)
+
+@app.route('/api/chat/plans', methods=['POST'])
+def plans_chat():
+    data = request.json
+    message = data.get('message', '')
+    current_plans = data.get('currentPlans', [])
+    chat_history = data.get('chatHistory', [])
+    preview_state = data.get('previewState', {})
+    
+    agent = PlanAgent()
+    result = agent.process_message(message, current_plans, chat_history, preview_state)
+    
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(debug=True)
