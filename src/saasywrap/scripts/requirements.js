@@ -20,7 +20,34 @@ class RequirementsManager {
             apiEndpoint: '/api/chat/requirements',
             onResponse: (data) => {
                 if (data.requirements) {
-                    this.requirements = data.requirements.map(req => this.enrichRequirement(req));
+                    // Update existing requirements and add new ones
+                    const updatedRequirements = [...this.requirements];
+                    
+                    data.requirements.forEach(newReq => {
+                        const existingIndex = updatedRequirements.findIndex(r => r.id === newReq.id);
+                        if (existingIndex !== -1) {
+                            // Update existing requirement
+                            updatedRequirements[existingIndex] = this.enrichRequirement({
+                                ...updatedRequirements[existingIndex],
+                                ...newReq
+                            });
+                        } else {
+                            // Add new requirement
+                            updatedRequirements.push(this.enrichRequirement(newReq));
+                        }
+                    });
+                    
+                    // Remove any requirements that were marked for deletion
+                    if (data.deletedRequirements) {
+                        data.deletedRequirements.forEach(id => {
+                            const index = updatedRequirements.findIndex(r => r.id === id);
+                            if (index !== -1) {
+                                updatedRequirements.splice(index, 1);
+                            }
+                        });
+                    }
+                    
+                    this.requirements = updatedRequirements;
                     this.renderRequirements();
                 }
             }
@@ -61,11 +88,11 @@ class RequirementsManager {
 
             // Add initial requirements as first message in chat
             if (initialRequirements) {
-                this.addUserMessage("Initial Requirements:\n" + initialRequirements);
+                this.chatManager.addUserMessage("Initial Requirements:\n" + initialRequirements);
             }
 
             // Show typing indicator before API call
-            this.showTypingIndicator();
+            this.chatManager.showTypingIndicator();
 
             if (initialDataset) {
                 const formData = new FormData();
@@ -94,7 +121,7 @@ class RequirementsManager {
             const data = await response.json();
             
             // Hide typing indicator before showing response
-            this.hideTypingIndicator();
+            this.chatManager.hideTypingIndicator();
             
             // Enrich the requirements with metadata
             this.requirements = data.requirements.map(req => this.enrichRequirement(req));
@@ -102,7 +129,7 @@ class RequirementsManager {
             
             // Add AI's response
             if (data.response) {
-                this.addAgentMessage(data.response);
+                this.chatManager.addAgentMessage(data.response);
             }
 
             // Store the dataset path if returned from backend
@@ -111,9 +138,9 @@ class RequirementsManager {
             }
         } catch (error) {
             // Hide typing indicator on error
-            this.hideTypingIndicator();
+            this.chatManager.hideTypingIndicator();
             console.error('Error generating requirements:', error);
-            this.addAgentMessage('Sorry, there was an error generating the requirements. Please try again.');
+            this.chatManager.addAgentMessage('Sorry, there was an error generating the requirements. Please try again.');
         }
     }
 
@@ -131,6 +158,11 @@ class RequirementsManager {
     createRequirementElement(req) {
         const container = document.createElement('div');
         container.className = 'requirement-container';
+        
+        // Define default categories but allow for custom ones
+        const defaultCategories = ['frontend', 'backend', 'database', 'uncategorized'];
+        const allCategories = [...new Set([...defaultCategories, req.category || 'uncategorized'])].sort();
+        
         container.innerHTML = `
             <div class="requirement-content">
                 <div class="requirement-header">
@@ -142,10 +174,11 @@ class RequirementsManager {
                             <option value="high" ${req.importance === 'high' ? 'selected' : ''}>High</option>
                         </select>
                         <select class="category-select">
-                            <option value="frontend" ${req.category === 'frontend' ? 'selected' : ''}>Frontend</option>
-                            <option value="backend" ${req.category === 'backend' ? 'selected' : ''}>Backend</option>
-                            <option value="database" ${req.category === 'database' ? 'selected' : ''}>Database</option>
-                            <option value="uncategorized" ${req.category === 'uncategorized' ? 'selected' : ''}>Uncategorized</option>
+                            ${allCategories.map(category => `
+                                <option value="${category}" ${req.category === category ? 'selected' : ''}>
+                                    ${category.charAt(0).toUpperCase() + category.slice(1)}
+                                </option>
+                            `).join('')}
                         </select>
                         <button class="history-btn">History</button>
                     </div>
@@ -153,7 +186,7 @@ class RequirementsManager {
                 <div class="requirement-description" contenteditable="true">${req.description}</div>
                 <div class="requirement-tags">
                     <div class="tags-list">
-                        ${req.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        ${(req.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
                     </div>
                     <input type="text" class="tag-input" placeholder="Add tag...">
                 </div>
@@ -164,7 +197,7 @@ class RequirementsManager {
                 <div class="change-history hidden">
                     <h4>Change History</h4>
                     <div class="history-list">
-                        ${req.changeHistory.map(change => `
+                        ${(req.changeHistory || []).map(change => `
                             <div class="history-item">
                                 <span class="history-type">${change.type}</span>
                                 <span class="history-details">${change.details}</span>
@@ -193,7 +226,7 @@ class RequirementsManager {
                 this.updateRequirement(req.id, { 
                     title: newTitle,
                     dateModified: new Date().toISOString(),
-                    changeHistory: [...req.changeHistory, {
+                    changeHistory: [...(req.changeHistory || []), {
                         type: 'title_changed',
                         timestamp: new Date().toISOString(),
                         userId: this.currentUserId,
@@ -209,7 +242,7 @@ class RequirementsManager {
                 this.updateRequirement(req.id, { 
                     description: newDesc,
                     dateModified: new Date().toISOString(),
-                    changeHistory: [...req.changeHistory, {
+                    changeHistory: [...(req.changeHistory || []), {
                         type: 'description_changed',
                         timestamp: new Date().toISOString(),
                         userId: this.currentUserId,
@@ -224,7 +257,7 @@ class RequirementsManager {
             this.updateRequirement(req.id, { 
                 importance: newImportance,
                 dateModified: new Date().toISOString(),
-                changeHistory: [...req.changeHistory, {
+                changeHistory: [...(req.changeHistory || []), {
                     type: 'importance_changed',
                     timestamp: new Date().toISOString(),
                     userId: this.currentUserId,
@@ -238,7 +271,7 @@ class RequirementsManager {
             this.updateRequirement(req.id, { 
                 category: newCategory,
                 dateModified: new Date().toISOString(),
-                changeHistory: [...req.changeHistory, {
+                changeHistory: [...(req.changeHistory || []), {
                     type: 'category_changed',
                     timestamp: new Date().toISOString(),
                     userId: this.currentUserId,
@@ -252,9 +285,9 @@ class RequirementsManager {
                 const newTag = e.target.value.trim();
                 if (!req.tags.includes(newTag)) {
                     this.updateRequirement(req.id, { 
-                        tags: [...req.tags, newTag],
+                        tags: [...(req.tags || []), newTag],
                         dateModified: new Date().toISOString(),
-                        changeHistory: [...req.changeHistory, {
+                        changeHistory: [...(req.changeHistory || []), {
                             type: 'tag_added',
                             timestamp: new Date().toISOString(),
                             userId: this.currentUserId,
@@ -335,99 +368,6 @@ class RequirementsManager {
     deleteRequirement(id) {
         this.requirements = this.requirements.filter(r => r.id !== id);
         this.renderRequirements();
-    }
-
-    showTypingIndicator() {
-        const indicator = document.createElement('div');
-        indicator.className = 'typing-indicator';
-        indicator.id = 'typing-indicator';
-        indicator.innerHTML = `
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-        `;
-        this.chatMessages.appendChild(indicator);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-    }
-
-    hideTypingIndicator() {
-        const indicator = document.getElementById('typing-indicator');
-        if (indicator) {
-            indicator.remove();
-        }
-    }
-
-    async processMessage(message) {
-        this.addUserMessage(message);
-        this.chatInput.value = '';
-        
-        // Show typing indicator
-        this.showTypingIndicator();
-        
-        try {
-            const input = {
-                message,
-                currentRequirements: this.requirements,
-                chatHistory: this.conversation_history,
-                initialContext: this.initialContext
-            }
-            console.log('Sending message to server:', input);
-            const response = await fetch('/api/chat/requirements', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(input)
-            });
-            
-            const data = await response.json();
-            
-            // Hide typing indicator before showing response
-            this.hideTypingIndicator();
-            
-            if (data.response) {
-                this.addAgentMessage(data.response);
-            }
-            
-            if (data.requirements) {
-                // Enrich any new requirements with metadata
-                this.requirements = data.requirements.map(req => this.enrichRequirement(req));
-                this.renderRequirements();
-            }
-        } catch (error) {
-            // Hide typing indicator on error
-            this.hideTypingIndicator();
-            console.error('Error processing message:', error);
-            this.addAgentMessage('Sorry, there was an error processing your message. Please try again.');
-        }
-    }
-    
-    addUserMessage(message) {
-        const messageEl = document.createElement('div');
-        messageEl.className = 'chat-message user-message';
-        messageEl.textContent = message;
-        this.chatMessages.appendChild(messageEl);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-        
-        // Add to conversation history
-        this.conversation_history.push({
-            role: 'user',
-            content: message
-        });
-    }
-    
-    addAgentMessage(message) {
-        const messageEl = document.createElement('div');
-        messageEl.className = 'chat-message agent-message';
-        messageEl.textContent = message;
-        this.chatMessages.appendChild(messageEl);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-        
-        // Add to conversation history
-        this.conversation_history.push({
-            role: 'assistant',
-            content: message
-        });
     }
 }
 

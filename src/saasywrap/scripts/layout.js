@@ -28,8 +28,21 @@ const toBlueprintBtn = document.getElementById('to-blueprint-btn');
 const requirementsList = document.getElementById('requirements-list');
 const requirementsChatInput = document.getElementById('requirements-chat-input');
 
+// Update button text based on blueprint existence
+function updateBlueprintButton() {
+    const hasBlueprint = window.blueprintManager && window.blueprintManager.blueprint.length > 0;
+    toBlueprintBtn.textContent = hasBlueprint ? 'View Blueprint' : 'Generate Blueprint';
+}
+
 toBlueprintBtn.addEventListener('click', () => {
+    const requirements = window.requirementsManager.requirements;
+    const hasBlueprint = window.blueprintManager && window.blueprintManager.blueprint.length > 0;
+    
     showScreen('blueprint');
+    if (!hasBlueprint) {
+        window.blueprintManager.initialize(requirements);
+    }
+    updateBlueprintButton();
 });
 
 // Blueprint Screen Handlers
@@ -41,6 +54,7 @@ const blueprintChatInput = document.getElementById('blueprint-chat-input');
 
 viewRequirementsBtn.addEventListener('click', () => {
     showScreen('requirements');
+    updateBlueprintButton();
 });
 
 // Transform Execution Handlers
@@ -54,3 +68,4 @@ playNextPanelBtn.addEventListener('click', () => {
 
 // Initialize to upload screen
 showScreen('upload');
+updateBlueprintButton();

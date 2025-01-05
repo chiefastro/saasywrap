@@ -116,11 +116,21 @@ def blueprint_chat():
     data = request.json
     message = data.get('message', '')
     current_blueprint = data.get('currentBlueprint', [])
-    chat_history = data.get('chatHistory', [])
     preview_state = data.get('previewState', {})
+    requirements = data.get('requirements', [])
+    chat_history = data.get('chatHistory', [])
     
+    # Initialize the blueprint agent
     agent = BlueprintAgent()
-    result = agent.process_message(message, current_blueprint, chat_history, preview_state)
+    
+    # Process the message with full context
+    result = agent.process_message(
+        message=message,
+        current_blueprint=current_blueprint,
+        chat_history=chat_history,
+        preview_state=preview_state,
+        requirements=requirements
+    )
     
     return jsonify(result)
 

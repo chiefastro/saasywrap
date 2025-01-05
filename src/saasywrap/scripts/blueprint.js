@@ -18,12 +18,21 @@ class BlueprintManager {
             sendButtonSelector: '#blueprint-screen .send-btn',
             apiEndpoint: '/api/chat/blueprint',
             onResponse: (data) => {
-                if (data.blueprint) {
-                    this.blueprint = data.blueprint;
+                // Apply changes to blueprint if any
+                if (data.changes) {
+                    for (const change of data.changes) {
+                        if (change.type === 'add') {
+                            this.blueprint.push(change.transform);
+                        } else if (change.type === 'modify') {
+                            const transform = this.blueprint.find(t => t.id === change.id);
+                            if (transform) {
+                                Object.assign(transform, change.updates);
+                            }
+                        } else if (change.type === 'remove') {
+                            this.blueprint = this.blueprint.filter(t => t.id !== change.id);
+                        }
+                    }
                     this.renderBlueprint();
-                }
-                if (data.preview) {
-                    this.updatePreview(data.preview);
                 }
             }
         });
@@ -31,7 +40,8 @@ class BlueprintManager {
         // Set additional request data for chat
         this.chatManager.setAdditionalRequestData(() => ({
             currentBlueprint: this.blueprint,
-            previewState: this.previewState
+            previewState: this.previewState,
+            requirements: window.requirementsManager.requirements
         }));
         
         // Bind event listeners
@@ -41,6 +51,9 @@ class BlueprintManager {
 
     async initialize(requirements) {
         try {
+            // Show typing indicator while generating blueprint
+            this.chatManager.showTypingIndicator();
+
             const response = await fetch('/api/generate-blueprint', {
                 method: 'POST',
                 headers: {
@@ -50,15 +63,20 @@ class BlueprintManager {
             });
             
             const data = await response.json();
+            
+            // Hide typing indicator before showing response
+            this.chatManager.hideTypingIndicator();
+            
             this.blueprint = data.blueprint;
             this.renderBlueprint();
             
             if (data.response) {
-                this.addAgentMessage(data.response);
+                this.chatManager.addAgentMessage(data.response);
             }
         } catch (error) {
+            this.chatManager.hideTypingIndicator();
             console.error('Error generating blueprint:', error);
-            this.addAgentMessage('Sorry, there was an error generating the blueprint. Please try again.');
+            this.chatManager.addAgentMessage('Sorry, there was an error generating the blueprint. Please try again.');
         }
     }
 
@@ -68,6 +86,9 @@ class BlueprintManager {
             const transformElement = this.createTransformElement(transform, index);
             this.transformsList.appendChild(transformElement);
         });
+        
+        // Scroll to the bottom of the transforms list
+        this.transformsList.scrollTop = this.transformsList.scrollHeight;
     }
 
     createTransformElement(transform, index) {
@@ -142,14 +163,14 @@ class BlueprintManager {
             
             // Add any messages from the agent
             if (data.message) {
-                this.addAgentMessage(data.message);
+                this.chatManager.addAgentMessage(data.message);
             }
             
             return data.status === 'completed';
         } catch (error) {
             console.error('Error executing transform:', error);
             this.updateTransformStatus(transformId, 'failed');
-            this.addAgentMessage('Sorry, there was an error executing this transform. Please try again.');
+            this.chatManager.addAgentMessage('Sorry, there was an error executing this transform. Please try again.');
             return false;
         }
     }
@@ -192,39 +213,6 @@ class BlueprintManager {
 
     updatePreview(previewHtml) {
         this.previewPanel.innerHTML = previewHtml;
-    }
-
-    addAgentMessage(message) {
-        const messageEl = document.createElement('div');
-        messageEl.className = 'chat-message agent-message';
-        messageEl.textContent = message;
-        this.chatMessages.appendChild(messageEl);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-        
-        this.conversation_history.push({
-            role: 'assistant',
-            content: message
-        });
-    }
-
-    showTypingIndicator() {
-        const indicator = document.createElement('div');
-        indicator.className = 'typing-indicator';
-        indicator.id = 'typing-indicator';
-        indicator.innerHTML = `
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-        `;
-        this.chatMessages.appendChild(indicator);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-    }
-
-    hideTypingIndicator() {
-        const indicator = document.getElementById('typing-indicator');
-        if (indicator) {
-            indicator.remove();
-        }
     }
 }
 

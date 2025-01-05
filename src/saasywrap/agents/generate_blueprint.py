@@ -139,31 +139,63 @@ Response format:
             }
 
     def process_message(self, message: str, current_blueprint: List[Dict], 
-                       chat_history: List[Dict], preview_state: Dict) -> Dict:
+                       chat_history: List[Dict], preview_state: Dict,
+                       requirements: List[Dict] = None) -> Dict:
         """Process a chat message and update blueprint if needed."""
-        self.blueprint = current_blueprint
+        # Work with a copy of the current blueprint
+        self.blueprint = current_blueprint.copy()
         self.conversation_history = chat_history
-        self.preview_state = preview_state
         
         prompt = f"""Given the current blueprint:
 {self._format_blueprint()}
+
+And the current requirements:
+{self._format_requirements(requirements) if requirements else "No requirements provided"}
 
 And the conversation history:
 {self._format_conversation_history()}
 
 The user's message: "{message}"
 
-Generate a response with:
-1. Message to the user
-2. Updated blueprint (if needed)
-3. Updated preview (if needed)
+You must respond with a JSON object containing two fields:
+1. "response": Your natural language response to the user
+2. "changes": An array of blueprint changes (can be empty if no changes needed)
 
-Response format:
+Example format:
 {{
-    "response": "I understand you want to modify transform 2...",
-    "blueprint": [...],
-    "preview": "<div>Updated preview</div>"
-}}"""
+    "response": "I understand you want to add a new transform for user authentication. I'll add that now.",
+    "changes": [
+        {{
+            "type": "add",
+            "transform": {{
+                "id": "transform-new",
+                "title": "Implement User Authentication",
+                "description": "Add secure authentication system",
+                "status": "pending",
+                "type": "backend",
+                "estimated_time": "30 minutes",
+                "dependencies": []
+            }}
+        }},
+        {{
+            "type": "modify",
+            "id": "existing-transform-id",
+            "updates": {{
+                "title": "Updated Title",
+                "description": "Updated description"
+            }}
+        }},
+        {{
+            "type": "remove",
+            "id": "transform-to-remove"
+        }}
+    ]
+}}
+
+Each change must be one of:
+1. add: Include a complete new transform object
+2. modify: Specify transform ID and fields to update
+3. remove: Specify transform ID to remove"""
 
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
@@ -182,13 +214,18 @@ Response format:
         
         try:
             import json
-            return json.loads(response.choices[0].message.content)
+            data = json.loads(response.choices[0].message.content)
+            
+            # Return just the response and changes, let frontend handle the updates
+            return {
+                'response': data['response'],
+                'changes': data.get('changes', [])
+            }
         except Exception as e:
             print(f"Error processing message: {str(e)}")
             return {
                 'response': 'Sorry, there was an error processing your message.',
-                'blueprint': self.blueprint,
-                'preview': None
+                'changes': []
             }
 
     def _format_requirements(self, requirements: List[Dict]) -> str:
