@@ -11,6 +11,30 @@ class BlueprintManager {
         this.playAllPanelBtn = document.getElementById('play-all-panel-btn');
         this.playNextPanelBtn = document.getElementById('play-next-panel-btn');
         
+        // Create modal container
+        this.requirementModal = document.createElement('div');
+        this.requirementModal.className = 'requirement-modal hidden';
+        this.requirementModal.innerHTML = `
+            <div class="requirement-modal-content">
+                <div class="requirement-modal-header">
+                    <h3></h3>
+                    <button class="close-modal-btn">×</button>
+                </div>
+                <div class="requirement-modal-body"></div>
+            </div>
+        `;
+        document.body.appendChild(this.requirementModal);
+        
+        // Modal close handlers
+        this.requirementModal.querySelector('.close-modal-btn').addEventListener('click', () => {
+            this.requirementModal.classList.add('hidden');
+        });
+        this.requirementModal.addEventListener('click', (e) => {
+            if (e.target === this.requirementModal) {
+                this.requirementModal.classList.add('hidden');
+            }
+        });
+        
         // Initialize chat manager
         this.chatManager = new ChatManager({
             chatId: 'blueprint-chat',
@@ -33,6 +57,9 @@ class BlueprintManager {
                         }
                     }
                     this.renderBlueprint();
+                    
+                    // Notify requirements manager of transform changes
+                    window.eventBus.emit('transforms:updated', this.blueprint);
                 }
             }
         });
@@ -47,6 +74,88 @@ class BlueprintManager {
         // Bind event listeners
         this.playAllPanelBtn.addEventListener('click', () => this.executeAllTransforms());
         this.playNextPanelBtn.addEventListener('click', () => this.executeNextTransform());
+
+        // Listen for requirement changes
+        window.eventBus.on('requirements:updated', this.handleRequirementsUpdate.bind(this));
+    }
+
+    handleRequirementsUpdate(requirements) {
+        // Check for deleted requirements
+        const deletedReqIds = new Set(
+            this.blueprint.flatMap(t => t.requirement_ids)
+                .filter(reqId => !requirements.find(r => r.id === reqId))
+        );
+
+        if (deletedReqIds.size > 0) {
+            const affectedTransforms = this.blueprint.filter(t => 
+                t.requirement_ids.some(reqId => deletedReqIds.has(reqId))
+            );
+
+            if (affectedTransforms.length > 0) {
+                this.chatManager.addAgentMessage(
+                    `Some requirements referenced by transforms have been deleted. ` +
+                    `Affected transforms: ${affectedTransforms.map(t => t.title).join(', ')}. \n\n` +
+                    `Would you like me to:\n` +
+                    `1. Remove these transforms\n` +
+                    `2. Keep the transforms but remove the deleted requirement references\n` +
+                    `3. Update these transforms to implement different requirements\n\n` +
+                    `Please respond with your choice (1-3) and any additional instructions. ` +
+                    `Note: If you want to restore the deleted requirements, please use the requirements chat.`
+                );
+            }
+        }
+
+        // Check for modified requirements
+        const modifiedReqs = requirements.filter(newReq => {
+            const oldReq = this.blueprint.flatMap(t => t.requirement_ids)
+                .find(reqId => reqId === newReq.id);
+            return oldReq && (
+                newReq.title !== oldReq.title ||
+                newReq.description !== oldReq.description ||
+                newReq.importance !== oldReq.importance
+            );
+        });
+
+        if (modifiedReqs.length > 0) {
+            const affectedTransforms = this.blueprint.filter(t =>
+                t.requirement_ids.some(reqId => modifiedReqs.some(r => r.id === reqId))
+            );
+
+            if (affectedTransforms.length > 0) {
+                this.chatManager.addAgentMessage(
+                    `Some requirements referenced by transforms have been modified. ` +
+                    `Modified requirements: ${modifiedReqs.map(r => r.title).join(', ')}. ` +
+                    `Affected transforms: ${affectedTransforms.map(t => t.title).join(', ')}.\n\n` +
+                    `Would you like me to:\n` +
+                    `1. Update the transforms' descriptions and implementation details\n` +
+                    `2. Split or combine transforms to better match the modified requirements\n` +
+                    `3. Keep the transforms as is\n\n` +
+                    `Please respond with your choice (1-3) and any additional instructions. ` +
+                    `Note: To make further modifications to the requirements, please use the requirements chat.`
+                );
+            }
+        }
+
+        // Check for transforms with no requirements
+        const transformsWithoutReqs = this.blueprint.filter(t => 
+            !t.requirement_ids || t.requirement_ids.length === 0
+        );
+
+        if (transformsWithoutReqs.length > 0) {
+            this.chatManager.addAgentMessage(
+                `The following transforms have no requirements assigned: ` +
+                `${transformsWithoutReqs.map(t => t.title).join(', ')}.\n\n` +
+                `Would you like me to:\n` +
+                `1. Assign existing requirements that match these transforms\n` +
+                `2. Remove these transforms\n` +
+                `3. Keep them as is\n\n` +
+                `Please respond with your choice (1-3) and any additional instructions. ` +
+                `Note: To create new requirements for these transforms, please use the requirements chat.`
+            );
+        }
+
+        // Re-render to update any requirement references
+        this.renderBlueprint();
     }
 
     async initialize(requirements) {
@@ -96,25 +205,81 @@ class BlueprintManager {
         container.className = 'blueprint-transform';
         container.dataset.transformId = transform.id;
         
+        // Get linked requirements
+        const linkedRequirements = transform.requirement_ids.map(reqId => {
+            const req = window.requirementsManager.requirements.find(r => r.id === reqId);
+            return req ? `<span class="requirement-link" data-req-id="${reqId}" title="Click to view details">${req.title}</span>` : reqId;
+        }).join(', ');
+        
         container.innerHTML = `
-            <div class="transform-header">
-                <span class="transform-number">${index + 1}</span>
-                <h3 class="transform-title">${transform.title}</h3>
-                <div class="transform-controls">
-                    <button class="play-transform-btn" title="Execute this transform">▶</button>
-                    <button class="play-until-btn" title="Execute until this transform">⏭</button>
+            <div class="transform-header" role="button" tabindex="0">
+                <div class="transform-header-row">
+                    <span class="transform-number">${index + 1}</span>
+                    <h3 class="transform-title">${transform.title}</h3>
+                </div>
+                <div class="transform-header-row">
+                    <div class="transform-type ${transform.transform_type}">${transform.transform_type}</div>
+                    <div class="transform-status ${transform.status}">
+                        ${this.getStatusIcon(transform.status)}
+                        <span>${transform.status}</span>
+                    </div>
+                    <div class="transform-controls">
+                        <button class="play-transform-btn" title="Execute this transform">▶</button>
+                        <button class="play-until-btn" title="Execute until this transform">⏭</button>
+                        <button class="toggle-details-btn" title="Toggle details">▼</button>
+                    </div>
                 </div>
             </div>
-            <div class="transform-description">${transform.description}</div>
-            <div class="transform-status ${transform.status}">
-                ${this.getStatusIcon(transform.status)}
-                <span>${transform.status}</span>
+            <div class="transform-details hidden">
+                <div class="transform-description">${transform.description}</div>
+                <div class="transform-metadata">
+                    <div class="transform-requirements">
+                        <strong>Requirements:</strong> ${linkedRequirements}
+                    </div>
+                    <div class="transform-time">
+                        <strong>Estimated Time:</strong> ${transform.estimated_time}
+                    </div>
+                    ${transform.dependencies.length > 0 ? `
+                    <div class="transform-dependencies">
+                        <strong>Dependencies:</strong> ${transform.dependencies.join(', ')}
+                    </div>` : ''}
+                </div>
             </div>
         `;
 
         // Add event listeners
+        const header = container.querySelector('.transform-header');
+        const details = container.querySelector('.transform-details');
+        const toggleBtn = container.querySelector('.toggle-details-btn');
         const playTransformBtn = container.querySelector('.play-transform-btn');
         const playUntilBtn = container.querySelector('.play-until-btn');
+        
+        const toggleDetails = (e) => {
+            // Don't toggle if clicking play buttons or requirement links
+            if (e.target.closest('.play-transform-btn, .play-until-btn, .requirement-link')) {
+                return;
+            }
+            details.classList.toggle('hidden');
+            toggleBtn.textContent = details.classList.contains('hidden') ? '▼' : '▲';
+        };
+        
+        header.addEventListener('click', toggleDetails);
+        header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleDetails(e);
+            }
+        });
+        
+        // Add requirement click handlers
+        container.querySelectorAll('.requirement-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const reqId = link.dataset.reqId;
+                this.showRequirementDetails(reqId);
+            });
+        });
         
         playTransformBtn.addEventListener('click', () => this.executeTransform(transform.id));
         playUntilBtn.addEventListener('click', () => this.executeUntilTransform(transform.id));
@@ -213,6 +378,43 @@ class BlueprintManager {
 
     updatePreview(previewHtml) {
         this.previewPanel.innerHTML = previewHtml;
+    }
+
+    showRequirementDetails(reqId) {
+        const req = window.requirementsManager.requirements.find(r => r.id === reqId);
+        if (!req) return;
+
+        const modalHeader = this.requirementModal.querySelector('.requirement-modal-header h3');
+        const modalBody = this.requirementModal.querySelector('.requirement-modal-body');
+
+        modalHeader.textContent = req.title;
+        modalBody.innerHTML = `
+            <div class="requirement-content">
+                <div class="requirement-description">${req.description}</div>
+                <div class="requirement-metadata">
+                    <div class="requirement-importance">
+                        <strong>Importance:</strong> ${req.importance}
+                    </div>
+                    <div class="requirement-category">
+                        <strong>Category:</strong> ${req.category}
+                    </div>
+                    ${req.tags && req.tags.length > 0 ? `
+                    <div class="requirement-tags">
+                        <strong>Tags:</strong>
+                        <div class="tags-list">
+                            ${req.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="requirement-footer">
+                    <span class="requirement-date">Modified: ${new Date(req.dateModified).toLocaleDateString()}</span>
+                    <span class="requirement-author">Created by: ${req.createdBy}</span>
+                </div>
+            </div>
+        `;
+
+        this.requirementModal.classList.remove('hidden');
     }
 }
 

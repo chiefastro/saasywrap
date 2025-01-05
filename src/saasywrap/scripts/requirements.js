@@ -49,6 +49,9 @@ class RequirementsManager {
                     
                     this.requirements = updatedRequirements;
                     this.renderRequirements();
+                    
+                    // Notify blueprint manager of requirement changes
+                    window.eventBus.emit('requirements:updated', this.requirements);
                 }
             }
         });
@@ -58,6 +61,99 @@ class RequirementsManager {
             currentRequirements: this.requirements,
             initialContext: this.initialContext
         }));
+
+        // Listen for transform changes
+        window.eventBus.on('transforms:updated', this.handleTransformsUpdate.bind(this));
+    }
+
+    handleTransformsUpdate(transforms) {
+        // Check for unassigned requirements
+        const allReqIds = new Set(transforms.flatMap(t => t.requirement_ids));
+        const unreferencedReqs = this.requirements.filter(r => !allReqIds.has(r.id));
+
+        if (unreferencedReqs.length > 0) {
+            this.chatManager.addAgentMessage(
+                `The following requirements are not referenced by any transform: ` +
+                `${unreferencedReqs.map(r => r.title).join(', ')}.\n\n` +
+                `Would you like me to:\n` +
+                `1. Mark these requirements as optional/future work\n` +
+                `2. Remove these requirements\n` +
+                `3. Keep them as is\n\n` +
+                `Please respond with your choice (1-3) and any additional instructions. ` +
+                `Note: To create new transforms for these requirements, please use the blueprint chat.`
+            );
+        }
+
+        // Check for newly referenced requirements
+        const newlyReferencedReqs = this.requirements.filter(r => 
+            allReqIds.has(r.id) && 
+            !this.getTransformsForRequirement(r.id, transforms).length
+        );
+
+        if (newlyReferencedReqs.length > 0) {
+            const referencingTransforms = transforms.filter(t =>
+                t.requirement_ids.some(reqId => newlyReferencedReqs.some(r => r.id === reqId))
+            );
+
+            this.chatManager.addAgentMessage(
+                `Some requirements are newly referenced by transforms:\n` +
+                newlyReferencedReqs.map(r => 
+                    `- ${r.title} is now used in: ${
+                        referencingTransforms
+                            .filter(t => t.requirement_ids.includes(r.id))
+                            .map(t => t.title)
+                            .join(', ')
+                    }`
+                ).join('\n') + '\n\n' +
+                `Would you like me to:\n` +
+                `1. Review and update the requirements to ensure they're clear and complete\n` +
+                `2. Add more details or acceptance criteria to the requirements\n` +
+                `3. Keep the requirements as is\n\n` +
+                `Please respond with your choice (1-3) and any additional instructions. ` +
+                `Note: To modify the transforms themselves, please use the blueprint chat.`
+            );
+        }
+
+        // Check for requirement overlap in transforms
+        const reqToTransformMap = new Map();
+        transforms.forEach(t => {
+            t.requirement_ids.forEach(reqId => {
+                if (!reqToTransformMap.has(reqId)) {
+                    reqToTransformMap.set(reqId, new Set());
+                }
+                reqToTransformMap.get(reqId).add(t.id);
+            });
+        });
+
+        const overlappingReqs = Array.from(reqToTransformMap.entries())
+            .filter(([_, transformIds]) => transformIds.size > 1)
+            .map(([reqId, transformIds]) => ({
+                requirement: this.requirements.find(r => r.id === reqId),
+                transforms: transforms.filter(t => transformIds.has(t.id))
+            }))
+            .filter(({requirement}) => requirement); // Filter out any invalid requirement IDs
+
+        if (overlappingReqs.length > 0) {
+            this.chatManager.addAgentMessage(
+                `Some requirements are implemented by multiple transforms:\n` +
+                overlappingReqs.map(({requirement, transforms}) =>
+                    `- ${requirement.title} is implemented in: ${transforms.map(t => t.title).join(', ')}`
+                ).join('\n') + '\n\n' +
+                `Would you like me to:\n` +
+                `1. Split these requirements into more granular ones\n` +
+                `2. Add clarification about which aspects each transform should handle\n` +
+                `3. Keep the requirements as is\n\n` +
+                `Please respond with your choice (1-3) and any additional instructions. ` +
+                `Note: To modify how the transforms implement these requirements, please use the blueprint chat.`
+            );
+        }
+
+        // Re-render to update any transform references
+        this.renderRequirements();
+    }
+
+    getTransformsForRequirement(reqId, transforms) {
+        return transforms.filter(t => t.requirement_ids.includes(reqId));
     }
 
     generateId() {
